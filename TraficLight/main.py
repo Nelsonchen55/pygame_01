@@ -20,6 +20,14 @@
         所以创建斑马线的时候给其一个坐标。但是斑马线只是一张图片而已，并不是一个对象
         应该用一个元组来记录它的坐标比较好
         以后地图会更加复杂，会有多个斑马线。 用list记录他们的位置
+
+    12/8/2021
+        创建商店， 关于商店应该是building的一个子类
+        -- Building
+            -- House
+            -- Shop
+        感觉没什么必要，但是还是先这样弄
+        Shop 重要弄个targe 用来实现购物
 """
 
 
@@ -27,6 +35,7 @@
 import pygame
 import os
 import random
+import sys
 
 FPS = 60
 WIDTH = 720
@@ -38,6 +47,7 @@ BLACK = (0,0,0)
 GREEN = (0,255,0)
 RED = (255,0,0)
 BLUE = (0,0,255)
+YELLOW = (255,255,0)
 
 # 游戏初始化 和 创建窗口
 pygame.init()
@@ -170,17 +180,60 @@ class Light(pygame.sprite.Sprite):
             self.time = pygame.time.get_ticks()
             self.image.set_colorkey((34,177,76))
 
+class Building(pygame.sprite.Sprite):
+    def __init__(self,pos_x,pos_y):
+        # pygame.sprite.Sprite.__init__(self)
+        pass
 
+    def update(self):
+        pass
+
+class Shop(Building):
+    def __init__(self,pos_x,pos_y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((100,100))
+        self.image.fill(YELLOW)
+        self.rect = self.image.get_rect()
+        self.width = 120
+        self.height = 120
+        self.rect.centerx = pos_x
+        self.rect.bottom = pos_y
+        self.all_sprites = pygame.sprite.Group()
+
+
+    def inside(self):
+        waiting = True
+        self.all_sprites.add(player)
+        while waiting:
+
+            clock.tick(FPS)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+            self.all_sprites.update()
+            if player.rect.bottom > HEIGHT:
+                waiting = False
+
+            screen.fill(WHITE)
+            self.all_sprites.draw(screen) 
+            pygame.display.update()
 
 # sprite 群组
 all_sprites = pygame.sprite.Group()
 all_cars = pygame.sprite.Group()
+all_shops = pygame.sprite.Group()
 player = Player()
 all_sprites.add(player)
 for i in range(4):
     new_car(i)
 light = Light(cross_list[0][0]+80,cross_list[0][1])
 all_sprites.add(light)
+
+target = Shop(WIDTH - 200, 200)
+all_sprites.add(target)
+all_shops.add(target)
 
 running = True
 # 游戏回圈
@@ -210,6 +263,13 @@ while running:
         new_car(hit.loadline)
         player.rect.bottom = HEIGHT - 10
 
+    # 人与商店相撞 --- 之后应该给商店设置个门口
+    hits = pygame.sprite.spritecollide(player,all_shops,False)
+    for hit in hits:
+        position = player.rect.centerx,player.rect.bottom
+        hit.inside()
+        player.rect.centerx,player.rect.bottom = position
+
 
     # 页面显示
     screen.fill(WHITE)
@@ -221,3 +281,6 @@ while running:
     pygame.display.update()
 
 
+
+
+    
