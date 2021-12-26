@@ -28,6 +28,18 @@
             -- Shop
         感觉没什么必要，但是还是先这样弄
         Shop 重要弄个targe 用来实现购物
+
+    12/9/2021
+        创建店员，和店员对话在左侧出现购物单
+        店员就是一个类，设置为seller,也是一个sprite.
+        和player发生碰撞后 -- player应该不能继续前行
+                          -- 应该按下一个固定健来对话
+                          上面的需求先不做
+                          直接碰撞就弹出  商品菜单
+
+    12/10/2021
+        今天来处理商品菜单的问题： 也许弄一个菜单的方法比较好
+            这个方法接受一个list， 然后将list 中的内容画在屏幕的右边
 """
 
 
@@ -37,10 +49,14 @@ import os
 import random
 import sys
 
+# 方便用于测试
+pos = 500,200
+
 FPS = 60
-WIDTH = 720
+WIDTH = 920
 HEIGHT = 650
 CAR_WIDTH,CAR_HEIGHT = 60,20
+ITEM_WIDTH,ITEM_HEIGHT = 100,100
 
 WHITE = (255,255,255)
 BLACK = (0,0,0)
@@ -98,18 +114,94 @@ def new_car(loadline):
     all_cars.add(car)
     all_sprites.add(car)
 
+# 菜单
+def draw_menu(ls1,ls2):
+    for index in range(len(ls1)):
+        screen.blit(ls1[index],(WIDTH - 150,index*110))
+        draw_text(screen,"+",20,(WIDTH - 240,index*110+60))
+        draw_text(screen,str(ls2[index]),30,(WIDTH - 210,index*110+65))
+        draw_text(screen,"-",20,(WIDTH - 180,index*110+60))
+
+Char_list = ['A','B','C','D','E','F','G']
+# 列出方程组,参数为: 未知数的个数,未知数可取的最大值
+def draw_equation_set(nums,largest):
+    equations = []
+    # 随机生成未知数
+    randnums = random.choices(list(range(largest)),k=nums)
+    numchars = Char_list[:nums]
+    # numchars.append(Char_list[0])
+    print(randnums)
+    # 这个循环是将从头都尾部的所有相邻的两个数进行操作
+    for i in range(nums):
+        a = randnums[i]
+        if i+1 == nums:
+            i = -1
+        b = randnums[i+1]
+        equations.append(str(numchars[i]) + ' + ' + str(numchars[i+1]) + ' = ' + str(a+b))
+
+    # 这个循环得到一个所有未知数的相关操作的一个等式
+    total_equation = ''
+    total_answer = 0
+    for i in range(nums):
+        total_answer = total_answer + randnums[i]
+        total_equation = total_equation + str(numchars[i])
+        if i == nums-1:
+            total_equation = total_equation + ' = ' + str(total_answer)
+        else:
+            total_equation = total_equation + ' + '
+    equations.append(total_equation)
+
+    return equations
+
+def calculating():
+    testing = True
+    while testing:
+        clock.tick(FPS)
+
+        screen.fill(WHITE)
+        eqs = draw_equation_set(3,10)
+        for i in range(len(eqs)):
+            draw_text(screen,eqs[i], 50, (300,100*i))
+
+        pygame.display.update()
+
+        while True:
+            event = pygame.event.wait()
+            if event.type == pygame.QUIT:
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    break
+                if event.key == pygame.K_q:
+                    testing = False
+                    break
+
+# 写文字在界面上
+font_name = os.path.join("TraficLight","font.ttf")
+def draw_text(surf,text,size,pos):
+    font = pygame.font.Font(font_name,size)
+    # 文本渲染
+    text_surface = font.render(text,True,BLACK)
+    # 定位
+    text_rect = text_surface.get_rect()
+    text_rect.centerx = pos[0]
+    text_rect.bottom = pos[1]
+    # 画出来
+    surf.blit(text_surface,text_rect)
+
 # 玩家
 """
     玩家应该用一个图片来表示，还没有找到图片，所以用个长方形表示
 """
 class Player(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self,pos_x,pos_y):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((30,50))
-        self.image.fill(BLUE)
+        self.image = pygame.image.load(os.path.join("TraficLight//img","men_01.jpg")).convert()
+        self.image.set_colorkey(WHITE)
+        # self.image.fill(BLUE)
         self.rect = self.image.get_rect()
-        self.rect.centerx = WIDTH/2
-        self.rect.bottom = HEIGHT - 20
+        self.rect.centerx = pos_x
+        self.rect.bottom = pos_y
         self.speed = 2
 
     def update(self):
@@ -199,14 +291,36 @@ class Shop(Building):
         self.rect.centerx = pos_x
         self.rect.bottom = pos_y
         self.all_sprites = pygame.sprite.Group()
+        self.all_sellers = pygame.sprite.Group()
 
 
     def inside(self):
-        waiting = True
+        
+        # player.rect.bottom = HEIGHT - 30
+        # player.rect.centerx = WIDTH/2
+        # 测试用码，需要改回上面的
+        player.rect.bottom = 200
+        player.rect.centerx = WIDTH/2
         self.all_sprites.add(player)
+        seller = Seller(WIDTH/2, 100)
+        self.all_sellers.add(seller)
+        self.all_sprites.add(seller)
+
+        shopping_images = []
+        shopping_images.append(pygame.transform.scale(pygame.image.load(os.path.join("TraficLight//img","chocalate.jpg")).convert(),(ITEM_WIDTH,ITEM_HEIGHT)))
+        shopping_images.append(pygame.transform.scale(pygame.image.load(os.path.join("TraficLight//img","Coca.webp")).convert(),(ITEM_WIDTH,ITEM_HEIGHT)))
+        shopping_images.append(pygame.transform.scale(pygame.image.load(os.path.join("TraficLight//img","cookie.webp")).convert(),(ITEM_WIDTH,ITEM_HEIGHT)))
+        shopping_images.append(pygame.transform.scale(pygame.image.load(os.path.join("TraficLight//img","notebook.jpg")).convert(),(ITEM_WIDTH,ITEM_HEIGHT)))
+        shopping_images.append(pygame.transform.scale(pygame.image.load(os.path.join("TraficLight//img","toy.jpg")).convert(),(ITEM_WIDTH,ITEM_HEIGHT)))
+        shopping_nums = [0 for x in shopping_images]
+
+        waiting = True
+        buying = False
         while waiting:
 
             clock.tick(FPS)
+            screen.fill(WHITE)
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -216,15 +330,53 @@ class Shop(Building):
             if player.rect.bottom > HEIGHT:
                 waiting = False
 
-            screen.fill(WHITE)
+            if buying == False:
+                # player 与 seller 碰撞
+                hits = pygame.sprite.spritecollide(player,self.all_sellers,False)
+            if hits and buying == False:
+                buying = True
+                player.rect.bottom = seller.rect.bottom + 50
+                
+                
+
+                while buying:
+                    clock.tick(FPS)
+                    screen.fill(WHITE)
+                    draw_menu(shopping_images,shopping_nums)
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            pygame.quit()
+                            sys.exit()
+                        elif event.type == pygame.MOUSEBUTTONDOWN:
+                            pos_x,pos_y = event.pos
+                            if pos_x > WIDTH - 100 and pos_y > HEIGHT - 100:
+                                buying = False
+                            elif pos_y > 0 and pos_y < 100:
+                                if pos_x < WIDTH  and pos_x > WIDTH - 230:
+                                    shopping_nums[0] += 1
+
+                    self.all_sprites.draw(screen) 
+                    pygame.display.update()
+
+            
             self.all_sprites.draw(screen) 
             pygame.display.update()
+
+class Seller(pygame.sprite.Sprite):
+    def __init__(self,pos_x,pos_y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((30,50))
+        self.image.fill(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.centerx = pos_x
+        self.rect.bottom = pos_y
+
 
 # sprite 群组
 all_sprites = pygame.sprite.Group()
 all_cars = pygame.sprite.Group()
 all_shops = pygame.sprite.Group()
-player = Player()
+player = Player(pos[0],pos[1])
 all_sprites.add(player)
 for i in range(4):
     new_car(i)
@@ -252,6 +404,10 @@ while running:
                     player.speed = 0
                 else:
                     player.speed = 2
+        # 按击 Q 键 用于测试新的加入功能
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_q:
+                calculating()
 
     # 更新游戏
     all_sprites.update()
@@ -266,9 +422,9 @@ while running:
     # 人与商店相撞 --- 之后应该给商店设置个门口
     hits = pygame.sprite.spritecollide(player,all_shops,False)
     for hit in hits:
-        position = player.rect.centerx,player.rect.bottom
+        # position = player.rect.centerx,player.rect.bottom
         hit.inside()
-        player.rect.centerx,player.rect.bottom = position
+        player.rect.centerx,player.rect.bottom = hit.rect.centerx,hit.rect.bottom+50
 
 
     # 页面显示
@@ -283,4 +439,5 @@ while running:
 
 
 
-    
+
+
