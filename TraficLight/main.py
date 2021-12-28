@@ -124,7 +124,7 @@ def draw_menu(ls1,ls2):
 
 Char_list = ['A','B','C','D','E','F','G']
 # 列出方程组,参数为: 未知数的个数,未知数可取的最大值
-def draw_equation_set(nums,largest):
+def create_equation_set(nums,largest):
     equations = []
     # 随机生成未知数
     randnums = random.choices(list(range(largest)),k=nums)
@@ -139,40 +139,106 @@ def draw_equation_set(nums,largest):
         b = randnums[i+1]
         equations.append(str(numchars[i]) + ' + ' + str(numchars[i+1]) + ' = ' + str(a+b))
 
-    # 这个循环得到一个所有未知数的相关操作的一个等式
-    total_equation = ''
-    total_answer = 0
-    for i in range(nums):
-        total_answer = total_answer + randnums[i]
-        total_equation = total_equation + str(numchars[i])
-        if i == nums-1:
-            total_equation = total_equation + ' = ' + str(total_answer)
-        else:
-            total_equation = total_equation + ' + '
-    equations.append(total_equation)
+    # # 这个循环得到一个所有未知数的相关操作的一个等式
+    # total_equation = ''
+    # total_answer = 0
+    # for i in range(nums):
+    #     total_answer = total_answer + randnums[i]
+    #     total_equation = total_equation + str(numchars[i])
+    #     if i == nums-1:
+    #         total_equation = total_equation + ' = ' + str(total_answer)
+    #     else:
+    #         total_equation = total_equation + ' + '
+    # equations.append(total_equation)
 
     return equations
 
+'''
+    画出方程组，并且接受数值的输入
+    需要对输入的数字进行判断，应该想生成方程组那些 显示出 数字的操作  。。。。 视乎思路完全打乱了，需要重新在设置一个方法？ 
+        而且创建方程组的方法也就是出现了加法操作而已，理论上时不应该这样的， 所以这个检测方法是不是也能先写出加法的操作
+
+    
+    key的按钮操作：
+        space:  刷新页面，生成新的方程组
+        0-9：   写入数字
+        return: 换到新的一行进行赋值
+        q:      退出该页面，回到原来的那个界面
+        应该还要有“检测” 和 “删除输入的所有数字” 这两个操作
+            “删除输入的所有数字” 较为简单，就是不调用create_equation_set方法跳出里循环
+            如果有“检测”的功能，就应该有一个数组来记录生成的数字
+                思路： 这个数组要有一个长度，应该和未知数的个数一样的
+                       按回车键时就应该进入下一个变量，所以index 为 line
+                       而且每次输入数字的时候，添加之前应该要*10
+                       这里line作为index的话，就要考虑outofindex的情况了，所以判断line到了一定的值时就不能继续增加了，所以也就不需要 p案件了
+        back:   “删除输入的所有数字”
+        p:      “检测”    ---- 改在return里实现
+
+'''
 def calculating():
+    variable_length, variable_range = (3,10)
+    eqs = create_equation_set(variable_length, variable_range)  # 方程组在刚开始或者按刷新时才重新调用的，所以因该放在游戏回圈前和触发刷新时
+    input_list = [0 for x in range(variable_length)]
+    print(input_list)
+    ORI_X,ORI_Y = (200,100)  # 角标的位置，用于方便控制 draw_text 的光标位置
+    x = ORI_X
+    y = ORI_Y
     testing = True
     while testing:
-        clock.tick(FPS)
-
         screen.fill(WHITE)
-        eqs = draw_equation_set(3,10)
+        
         for i in range(len(eqs)):
-            draw_text(screen,eqs[i], 50, (300,100*i))
+            draw_text(screen,eqs[i], 50, (x,y*i))
+            draw_text(screen,Char_list[i]+" = ", 50, (x+500, y*i))
+
 
         pygame.display.update()
 
+        line = 0 # 用于记录现在输入数字应该对应与那一行
         while True:
             event = pygame.event.wait()
             if event.type == pygame.QUIT:
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
+                # x,y = pygame.mouse.get_pos() # 在鼠标所在的位置写入数字也是不错的，就是不能使数字处于水平，而且间距也不好看
+                if event.key <= pygame.K_9 and event.key >= pygame.K_0 :
+                    input_list[line] = input_list[line] * 10 + (event.key-pygame.K_0)
+                    draw_text(screen,str(event.key-pygame.K_0),50,(x+590,y*line))
+                    # 虽然现在的未知数都是单位数的，以后可能要调大到两位数，所以输入一个数值后，x的值应该右移动一点
+                    x = x + 25
+                    pygame.display.update()
+                elif event.key == pygame.K_RETURN:
+                    # 并且x的值应该回归原来的值
+                    x = ORI_X
+                    # 换到输入的下一行, 如果line的值小于变量的值
+                    if line < variable_length-1:
+                        line = line + 1
+                    else:
+                        # 写出检测的方程组
+                        equations = []
+                        # 这个循环是将从头都尾部的所有相邻的两个数进行操作
+                        for i in range(variable_length):
+                            a = input_list[i]
+                            if i+1 == variable_length:
+                                i = -1
+                            b = input_list[i+1]
+                            equations.append(str(input_list[i]) + ' + ' + str(input_list[i+1]) + ' = ' + str(a+b))
+
+                        for i in range(len(equations)):
+                            draw_text(screen,equations[i], 50, (x,y*(i+variable_length)))
+
+                        pygame.display.update()
+                        input_list = [0 for x in range(variable_length)]              
+                elif event.key == pygame.K_SPACE:
+                    input_list = [0 for x in range(variable_length)]
+                    eqs = create_equation_set(variable_length, variable_range)
+                    x = ORI_X
                     break
-                if event.key == pygame.K_q:
+                elif event.key == pygame.K_BACKSPACE:
+                    input_list = [0 for x in range(variable_length)]
+                    x = ORI_X
+                    break
+                elif event.key == pygame.K_q:
                     testing = False
                     break
 
@@ -184,8 +250,8 @@ def draw_text(surf,text,size,pos):
     text_surface = font.render(text,True,BLACK)
     # 定位
     text_rect = text_surface.get_rect()
-    text_rect.centerx = pos[0]
-    text_rect.bottom = pos[1]
+    text_rect.left = pos[0]
+    text_rect.top = pos[1]
     # 画出来
     surf.blit(text_surface,text_rect)
 
